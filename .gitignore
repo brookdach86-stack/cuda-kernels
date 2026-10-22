@@ -1,0 +1,9 @@
+.vscode/
+settings.json
+*.exe
+*.obj
+*.pdb
+*.o
+*.lib
+*.dll
+vector.Addtion
