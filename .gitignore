@@ -7,3 +7,5 @@ settings.json
 *.lib
 *.dll
 vector.Addtion
+*.csv
+*.ncu-rep
