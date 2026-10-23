@@ -126,7 +126,18 @@ int main()
     dim3 block(TILE_SIZE, TILE_SIZE);
     dim3 grid((N + TILE_SIZE - 1) / TILE_SIZE, (M + TILE_SIZE - 1) / TILE_SIZE);
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start);
     matmul_double_buf<<<grid, block>>>(d_C, d_A, d_B, M, K, N);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float gpu_time = 0.0f;
+    cudaEventElapsedTime(&gpu_time, start, stop);
+    printf("GPU kernel time (v4 double buffer): %.3f ms\n", gpu_time);
+
     cudaMemcpy(h_C, d_C, bytes_C, cudaMemcpyDeviceToHost);
 
     cpu_matmul(h_C_cpu, h_A, h_B, M, K, N);
