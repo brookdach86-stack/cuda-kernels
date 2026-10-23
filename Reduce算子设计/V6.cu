@@ -55,8 +55,12 @@ __global__ void reduce_final(float *d_out, float *d_partial, int num_blocks)
 
     __shared__ float smem[BLOCK_SIZE];
 
-    //d_partial.size() = num_blocks
-    smem[tid] = (tid < num_blocks) ? d_partial[tid] : 0.0f;
+    float local_sum = 0.0f;
+    for (int i = tid; i < num_blocks; i += BLOCK_SIZE)
+    {
+        local_sum += d_partial[i];
+    }
+    smem[tid] = local_sum;
     __syncthreads();
 
     for (int stride = BLOCK_SIZE / 2; stride >= 32; stride /= 2)
@@ -68,15 +72,18 @@ __global__ void reduce_final(float *d_out, float *d_partial, int num_blocks)
         __syncthreads();
     }
 
-    float val = smem[tid];
-    for (int stride = 16; stride >= 1; stride /= 2)
+    if (tid < 32)
     {
-        val += __shfl_down_sync(0xFFFFFFFF, val, stride);
-    }
+        float val = smem[tid];
+        for (int stride = 16; stride >= 1; stride /= 2)
+        {
+            val += __shfl_down_sync(0xFFFFFFFF, val, stride);
+        }
 
-    if (tid == 0)
-    {
-        d_out[0] = val;
+        if (tid == 0)
+        {
+            d_out[0] = val;
+        }
     }
 }
 

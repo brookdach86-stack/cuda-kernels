@@ -33,16 +33,18 @@ __global__ void reduce_kernel(float *d_out, float *d_data, int N)
         __syncthreads();
     }
 
-    // Warp Shuffle: 32个线程，每个线程处理1个元素，每个线程内进行16次循环，每次循环处理1个元素，每个循环内进行16次原子操作
-    float val = smem[tid];
-    for (int stride = 16; stride >= 1; stride /= 2)
+    if (tid < 32)
     {
-        val += __shfl_down_sync(0xFFFFFFFF, val, stride);
-    }
+        float val = smem[tid];
+        for (int stride = 16; stride >= 1; stride /= 2)
+        {
+            val += __shfl_down_sync(0xFFFFFFFF, val, stride);
+        }
 
-    if ((tid % 32) == 0)
-    {
-        atomicAdd(&d_out[0], val);
+        if (tid == 0)
+        {
+            atomicAdd(&d_out[0], val);
+        }
     }
 }
 

@@ -1,4 +1,1 @@
-@echo off
-cd /d "%~dp0"
-ncu --metrics gpu__time_duration.sum,dram__throughput.avg.pct_of_peak_sustained_elapsed,sm__throughput.avg.pct_of_peak_sustained_elapsed v1.exe
-pause
+ncu --metrics gpu__time_duration.sum --launch-count 1 "D:\AI HPC\CUDA-learning\矩阵乘法\v1.exe" > "D:\AI HPC\CUDA-learning\矩阵乘法\ncu_v1.txt" 2>&1
