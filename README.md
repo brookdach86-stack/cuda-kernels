@@ -242,4 +242,4 @@ V0 的 Occupancy 高达 96.87% 但最慢——因为每行一个线程，每个�
 - [x] Tensor Core GEMM
 - [x] Nsight Compute 权限解锁（注册表 RmProfilingAdminOnly=0）
 - [x] Reduce V5–V7 结果不对，需要查 bug（正确性问题，不是性能问题）
-- [ ] GEMM 4096³/8192³ 的 Nsight 指标（目前只有 cudaEvent 计时，需手动以管理员身份运行 `矩阵乘法/run_ncu_all.bat`）
+- [x] GEMM 4096³/8192³ 的 Nsight 指标（SM/DRAM/L1/L2/Occupancy，已填入第 8 节）
