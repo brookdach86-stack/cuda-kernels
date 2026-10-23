@@ -230,16 +230,3 @@ V0 的 Occupancy 高达 96.87% 但最慢——因为每行一个线程，每个�
 | cuBLAS | 32346.58 us | 34.0 | 100.0% |
 
 结论：cuBLAS 4096→8192 从 34.6 掉到 34.0 TFLOPS，几乎不掉，说明 cuBLAS 在 8192 还没到带宽墙；而手写 k5 从 21.5 掉到 19.6，掉了约 9%，说明手写版的访存模式比 cuBLAS 差，大矩阵下被带宽拖得更狠。
-
----
-
-## 还差的事
-
-- [x] GEMM V1→V4 实测（RTX 5060 + Nsight Compute）
-- [x] 4096 / 8192 大矩阵测一次，看看什么时候触发带宽瓶颈
-- [x] Reduce V0→V7 跑一遍（cudaEvent + Nsight Compute）
-- [x] SoftMax / RMSNorm 补实测数字 + Nsight 指标
-- [x] Tensor Core GEMM
-- [x] Nsight Compute 权限解锁（注册表 RmProfilingAdminOnly=0）
-- [x] Reduce V5–V7 结果不对，需要查 bug（正确性问题，不是性能问题）
-- [x] GEMM 4096³/8192³ 的 Nsight 指标（SM/DRAM/L1/L2/Occupancy，已填入第 8 节）
