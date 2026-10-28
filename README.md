@@ -291,3 +291,16 @@ V4 的 32×32 小 tile 导致数据刚进 L1 就被踢出去，而 V3 的 128×1
 | cuBLAS | 32346.58 us | 34.0 | 100.0% |
 
 结论：cuBLAS 4096→8192 从 34.6 掉到 34.0 TFLOPS，几乎不掉，说明 cuBLAS 在 8192 还没到带宽墙；而手写 k5 从 21.5 掉到 19.6，掉了约 9%，说明手写版的访存模式比 cuBLAS 差，大矩阵下被带宽拖得更狠。
+
+## 10. 入门片段
+
+更早的索引和访存小例子，原来放在 `.vscode/` 里，被 gitignore 挡住，没有进仓库。正式的 Reduce、Softmax、RMSNorm、GEMM 仍以上面的版本为准。这些文件只保留做法，不作为性能结论。
+
+| 文件 | 干嘛的 |
+| --- | --- |
+| `入门片段/2D/2Dgrid+2DBlock.cu` | 2D grid 做灰度 |
+| `入门片段/3D/3Dgrid+3DBlock.cu` | `blockIdx.z` 当 batch |
+| `入门片段/Constant Memory/Constant_memory.cu` | `__constant__` |
+| `入门片段/Shared Memory/` | bank conflict、padding、shared memory 逆序 |
+| `入门片段/Texture Memory/Texture_Memory.cu` | `__ldg` / `__restrict__` 只读缓存 |
+| `入门片段/matmul_tiled/matmul_tiled.cu` | `TILE=16` 的分块矩阵乘草稿 |
