@@ -27,108 +27,108 @@
 - 伪cp.async double buffering——看起来轮了两个buffer但prefetch时机不对，反而比单buffer慢（`GEMM/gemm_double_buffer.cu`）
 - WMMA fragment布局和文档写的不一样——K/N stride搞反了，编译过了但结果是错的，花了一天才debug出来
 
-## 1. Vector Add, Grid Stride
+## 1. Vector Add & Grid Stride
 
-| File | Description |
+| 文件 | 说明 |
 | ------ | -------- |
-| `CUDA--vector_addtion/saxpy.cu` | First kernel, SAXPY |
-| `CUDA--vector_addtion/vectorAdd.cu` | Vector addition |
-| `CUDA.vscode/Grid_stride_Loop.cu` | Grid-Stride Loop — arrays larger than thread count still work |
-| `CUDA.vscode/Index_check.cu` | How `blockIdx` and `threadIdx` map to data |
-| `CUDA.vscode/Thread and Grid Indexing.cu` | 1D/2D/3D thread organization |
-| `CUDA.vscode/GPU显存.cu` | `cudaMalloc`, `cudaMemcpy`, `cudaFree` |
+| `CUDA--vector_addtion/saxpy.cu` | 第一个kernel，SAXPY |
+| `CUDA--vector_addtion/vectorAdd.cu` | 向量加法 |
+| `CUDA.vscode/Grid_stride_Loop.cu` | Grid-Stride Loop——thread数量比数组小也能跑 |
+| `CUDA.vscode/Index_check.cu` | `blockIdx`和`threadIdx`怎么映射到数据 |
+| `CUDA.vscode/Thread and Grid Indexing.cu` | 1D/2D/3D thread组织 |
+| `CUDA.vscode/GPU显存.cu` | `cudaMalloc`、`cudaMemcpy`、`cudaFree` |
 
-`blockIdx × blockDim + threadIdx` — this is the formula.
+公式：`blockIdx × blockDim + threadIdx`。
 
 ---
 
-## 2. Registers
+## 2. Registers（寄存器）
 
-| File | Description |
+| 文件 | 说明 |
 | ------ | -------- |
-| `Register/register_overflow.cu` | Performance impact of register spilling to local memory |
-| `Register/register_spill.cu` | Too many variables → won't fit in registers → spill → slow |
-| `Register/register_opt.cu` | Use fewer variables to avoid spilling |
+| `Register/register_overflow.cu` | register spill到local memory的性能影响 |
+| `Register/register_spill.cu` | 变量太多→放不进register→spill→变慢 |
+| `Register/register_opt.cu` | 减少变量避免spill |
 
-An SM has 65536 registers total. When `threads × registers per thread` exceeds this, spilling to local memory (in HBM) causes a performance cliff.
+一个SM总共65536个register。当`threads × registers per thread`超过这个数，spill到local memory（其实在HBM）就会性能跳水。
 
 ---
 
 ## 3. Shared Memory & Memory Access
 
-| File | Description |
+| 文件 | 说明 |
 | ------ | -------- |
-| `内存管理/合并访问/coalesced_access.cu` | Coalesced access — consecutive addresses read by same warp are fastest |
-| `内存管理/向量化加载/main.cu` | `float4` loads 128 bits at a time |
-| `内存管理/向量化加载/vector_alignment.cu` | Misalignment forces an extra load |
-| `内存管理/共享内存Bank冲突优化/usaul_confict.cu` | Bank conflict: multiple threads hit same bank → serialized |
-| `内存管理/内存访问优化实战/matrix_transpose_optimization.cu` | Matrix transpose — use shared memory to convert column writes to row writes |
-| `内存管理/内存访问优化实战/coding_convention_optimization.cu` | Different source forms lead to very different compiler optimization |
+| `内存管理/合并访问/coalesced_access.cu` | Coalesced access——同warp读连续地址最快 |
+| `内存管理/向量化加载/main.cu` | `float4`一次读128 bit |
+| `内存管理/向量化加载/vector_alignment.cu` | 没对齐会多一次load |
+| `内存管理/共享内存Bank冲突优化/usaul_confict.cu` | Bank conflict：多thread撞同一个bank→串行化 |
+| `内存管理/内存访问优化实战/matrix_transpose_optimization.cu` | 矩阵转置——用shared memory把列写改成行写 |
+| `内存管理/内存访问优化实战/coding_convention_optimization.cu` | 源码写法不同，编译器优化结果差很多 |
 
-Bank conflict happens when ≥2 threads among 32 land on the same bank address — one access becomes multiple. Two fixes: padding (add an extra column) or swizzle (XOR to scatter).
+Bank conflict发生在≥2个thread（32个里）落到同一个bank地址——一次访问变多次。两种解法：padding（加一列）或swizzle（XOR打散）。
 
 ---
 
 ## 4. Warp Primitives
 
-| File | Description |
+| 文件 | 说明 |
 | ------ | -------- |
-| `CUDA.vscode/Warp/warp_shuffle.cu` | `__shfl_down_sync` — data exchange within a warp |
-| `内存管理/.Warp级原语/Warp_match.cu` | `__match_any_sync` — find threads with same value |
-| `内存管理/.Warp级原语/Warp_vote.cu` | `__any_sync / __all_sync` — warp voting |
-| `内存管理/.Warp级原语/Warp_width.cu` | `__shfl_xor_sync` — butterfly exchange |
+| `CUDA.vscode/Warp/warp_shuffle.cu` | `__shfl_down_sync`——warp内数据交换 |
+| `内存管理/.Warp级原语/Warp_match.cu` | `__match_any_sync`——找值相同的thread |
+| `内存管理/.Warp级原语/Warp_vote.cu` | `__any_sync / __all_sync`——warp投票 |
+| `内存管理/.Warp级原语/Warp_width.cu` | `__shfl_xor_sync`——蝶形交换 |
 | `内存管理/.Warp级原语/__activemask()and__syncwarp().cu` | `__activemask()` + `__syncwarp()` |
 
-Warp is the smallest CUDA execution unit — 32 threads locked together. Shuffles move data at register level, one step faster than shared memory.
+Warp是CUDA最小执行单位——32个thread锁在一起。Shuffle在register层面传数据，比shared memory快一步。
 
 ---
 
 ## 5. Reduce V0→V7
 
-| Version | What Changed | Latency (N=16M) | Notes |
+| Version | 改了什么 | Latency (N=16M) | 备注 |
 | ------ | --------- | ------ | ---- |
-| `V0.cu` | Simplest, global memory stride, non-coalesced | — | Single block, N>2048 fails silently |
-| `V1.cu` | Fixed read order, coalesced access | — | Single block |
-| `V2_share.cu` | Data moved to shared memory before reduction | — | Single block |
-| `V3_Blocks.cu` | Each block reduces a partition, host sums them | — | Single block |
-| `V4.cu` | No `__syncthreads` within warp — saves sync overhead | 0.545 ms | Correct result |
-| `V5.cu` | Warp shuffle eliminates the last 32 steps of shared memory | 0.498 ms | Correct (bug fixed) |
-| `V6.cu` | Two-stage reduction eliminates atomicAdd contention | 0.449 ms | Correct (bug fixed) |
-| `V7.cu` | float4 vectorization + two-stage reduction | 0.592 ms | Correct (bug fixed) |
+| `V0.cu` | 最简单的global memory stride，non-coalesced | — | Single block，N>2048静默失败 |
+| `V1.cu` | 调整读顺序，coalesced access | — | Single block |
+| `V2_share.cu` | 数据先搬到shared memory再规约 | — | Single block |
+| `V3_Blocks.cu` | 每个block规约一部分，host再加起来 | — | Single block |
+| `V4.cu` | warp内不用`__syncthreads`——省同步开销 | 0.545 ms | 结果正确 |
+| `V5.cu` | Warp shuffle干掉最后32步shared memory | 0.498 ms | 正确（bug修了） |
+| `V6.cu` | 两阶段规约消除atomicAdd竞争 | 0.449 ms | 正确（bug修了） |
+| `V7.cu` | float4向量化 + 两阶段规约 | 0.592 ms | 正确（bug修了） |
 
-Tested on RTX 5060 Laptop, N = 1<<24 = 16M, cudaEvent timing + Nsight Compute.
+RTX 5060 Laptop上测，N = 1<<24 = 16M，cudaEvent计时 + Nsight Compute profiling。
 
-| Version | Latency | Memory% | DRAM% | L1 Hit% | L2 Hit% | Occupancy% | Notes |
+| Version | Latency | Memory% | DRAM% | L1 Hit% | L2 Hit% | Occupancy% | 备注 |
 | ------ | ------ | ------- | ----- | ------- | ------- | ---------- | ---- |
-| `V0.cu` | — | — | — | — | — | — | Single block, N>2048 fails |
+| `V0.cu` | — | — | — | — | — | — | Single block，N>2048静默失败 |
 | `V1.cu` | — | — | — | — | — | — | Single block |
 | `V2_share.cu` | — | — | — | — | — | — | Single block |
 | `V3_Blocks.cu` | — | — | — | — | — | — | Single block |
-| `V4.cu` | 0.545 ms | 28.11 | 24.91 | 74.93 | 3.55 | 66.55 | Correct |
-| `V5.cu` | 0.498 ms | — | — | — | — | — | Correct (bug fixed) |
-| `V6.cu` | 0.449 ms | — | — | — | — | — | Correct (bug fixed) |
-| `V7.cu` | 0.592 ms | — | — | — | — | — | Correct (bug fixed) |
+| `V4.cu` | 0.545 ms | 28.11 | 24.91 | 74.93 | 3.55 | 66.55 | 正确 |
+| `V5.cu` | 0.498 ms | — | — | — | — | — | 正确（bug修了） |
+| `V6.cu` | 0.449 ms | — | — | — | — | — | 正确（bug修了） |
+| `V7.cu` | 0.592 ms | — | — | — | — | — | 正确（bug修了） |
 
-Key findings:
+**关键发现**：
 
-1. V0–V3 are single-block designs; threads = N/2 exceeds the 1024 limit, kernel fails silently, only works for small N. V4+ multi-block versions needed for large N.
-2. All V5–V7 bugs fixed:
-   - **V5**: All 512 threads executed warp shuffle, then `if (tid % 32 == 0) atomicAdd` — so lane 0 of all 16 warps added garbage smem values. Fix: wrap shuffle in `if (tid < 32)`, only `tid==0` does atomicAdd.
-   - **V6/V7**: `reduce_final` read only the first 512 partials by tid; when block count > 512, remaining data was dropped. Fix: each thread loops `for (i = tid; i < num_blocks; i += BLOCK_SIZE)` over all partials.
-3. V4 DRAM only 24.91%, L2 Hit only 3.55% — data is too large (64 MB) and mostly goes to HBM, but bandwidth isn't saturated. V6 two-stage reduction is fastest (0.449ms). V7 float4 vectorization is actually slowest — alignment overhead cancels vectorization gains in this memory-bound scenario.
+1. V0–V3都是single-block设计；N/2超过1024 limit时kernel静默失败，只能跑小N。V4+改成multi-block才能跑大N。
+2. V5–V7都有bug并修了：
+   - **V5**：512个thread全执行warp shuffle然后`if (tid % 32 == 0) atomicAdd`——所有16个warp的lane 0都加了垃圾smem值。修法：shuffle包在`if (tid < 32)`里，只让`tid==0`做atomicAdd
+   - **V6/V7**：`reduce_final`只read前512个partial；block count>512时后面的数据被丢了。修法：每个thread `for (i = tid; i < num_blocks; i += BLOCK_SIZE)` 遍历所有partial
+3. V4 DRAM只有24.91%，L2 Hit只有3.55%——数据太大（64 MB）主要走HBM但带宽没饱和。V6两阶段规约最快（0.449ms）。V7用float4向量化反而最慢——alignment overhead抵消了向量化收益（memory-bound场景）。
 
 ---
 
 ## 6. SoftMax
 
-| Version | What Changed | Latency (N=8192, C=4096) |
+| Version | 改了什么 | Latency (N=8192, C=4096) |
 | ------ | --------- | ------ |
-| `cpu.cu` | CPU baseline, max→exp→sum→normalize, three passes | — |
-| `v0.cu` | GPU naive, one thread per row | 5.245 ms |
-| `v1.cu` | Online softmax, single pass | 3.946 ms |
-| `v2.cu` | Warp-level online softmax | 1.240 ms |
+| `cpu.cu` | CPU baseline，max→exp→sum→normalize三遍扫描 | — |
+| `v0.cu` | GPU naive，一个thread一行 | 5.245 ms |
+| `v1.cu` | Online softmax，单趟扫描 | 3.946 ms |
+| `v2.cu` | Warp级online softmax | 1.240 ms |
 
-Tested on RTX 5060 Laptop, 8192 rows × 4096 columns, cudaEvent timing + Nsight Compute.
+RTX 5060 Laptop上测，8192行 × 4096列，cudaEvent计时 + Nsight Compute。
 
 | Version | Latency (cudaEvent) | Latency (ncu) | Memory% | DRAM% | L1 Hit% | L2 Hit% | Occupancy% |
 | ------ | ------ | ------ | ------- | ----- | ------- | ------- | ---------- |
@@ -136,26 +136,26 @@ Tested on RTX 5060 Laptop, 8192 rows × 4096 columns, cudaEvent timing + Nsight 
 | `v1.cu` (online) | 3.946 ms | 6.96 ms | 41.96 | 17.59 | 73.91 | 77.72 | 23.38 |
 | `v2.cu` (warp-online) | 1.240 ms | 1.04 ms | 77.51 | 77.51 | 0 | 17.77 | 84.73 |
 
-Online means accumulating sum while finding the max — old values are automatically discounted. This is exactly what FlashAttention uses.
+Online就是一边找max一边累加sum——旧值自动打折。FlashAttention用的就是这个思路。
 
-v2 assigns one row to one warp (32 threads), using `__shfl_down_sync` for warp-level reduction — ~6× faster than v1. Key metric differences:
+v2给每行分配一个warp（32 thread），用`__shfl_down_sync`做warp级reduction——比v1快了约6倍。关键指标差异：
 
-1. v2 **L1 Hit Rate = 0%** — warp shuffle exchanges data directly between registers, L1 cache is bypassed entirely. This is why it's fast.
-2. v0/v1 Occupancy only 23% (one thread per row, most SMs idle); v2 reaches 84.73%.
-3. v2 DRAM hits 77.51%, v0/v1 only 18% — v2 is truly bandwidth-bound, further optimization must target access patterns.
+1. v2 **L1 Hit Rate = 0%**——warp shuffle直接在register里传数据，L1 cache完全被绕过。这就是它快的原因。
+2. v0/v1 Occupancy只有23%（一个thread一行，大部分SM闲着）；v2到了84.73%。
+3. v2 DRAM到了77.51%，v0/v1只有18%——v2真正是带宽受限，再优化得从访问模式入手。
 
 ---
 
 ## 7. RMSNorm
 
-| Version | What Changed | Latency (B=64, T=1024, C=2048) |
+| Version | 改了什么 | Latency (B=64, T=1024, C=2048) |
 | ------ | --------- | ------ |
 | `CPU.cu` | CPU baseline | — |
-| `V0.cu` | One thread per row | 16.984 ms |
-| `V1.cu` | One block per row, shared memory reduction | 26.286 ms |
-| `V2.cu` | Multiple rows share shared memory, segmented reduction | 4.477 ms |
+| `V0.cu` | 一个thread一行 | 16.984 ms |
+| `V1.cu` | 一个block一行，shared memory规约 | 26.286 ms |
+| `V2.cu` | 多行共享shared memory，分段规约 | 4.477 ms |
 
-Tested on RTX 5060 Laptop, B=64, T=1024, C=2048, cudaEvent timing + Nsight Compute.
+RTX 5060 Laptop上测，B=64, T=1024, C=2048，cudaEvent计时 + Nsight Compute。
 
 | Version | Latency (cudaEvent) | Latency (ncu) | Memory% | DRAM% | L1 Hit% | L2 Hit% | Occupancy% |
 | ------ | ------ | ------ | ------- | ----- | ------- | ------- | ---------- |
@@ -163,25 +163,25 @@ Tested on RTX 5060 Laptop, B=64, T=1024, C=2048, cudaEvent timing + Nsight Compu
 | `V1.cu` (shared reduction) | 26.286 ms | — | — | — | — | — | — |
 | `V2.cu` (multi-row share) | 4.477 ms | 4.18 ms | 86.57 | 86.57 | 24.64 | 33.59 | 49.64 |
 
-RMSNorm computes `rms = sqrt(mean(x²))` per token independently. The bottleneck is reduction.
+RMSNorm对每个token独立算`rms = sqrt(mean(x²))`。瓶颈在reduction。
 
-V0 has Occupancy of 96.87% but is slowest — one thread per row serially scans C=2048 elements, Warp Cycles Per Issued reaches 255.6 cycles, mostly waiting on memory. V2 uses warp reduction (one warp per row), DRAM hits 86.57%, 5× faster than V0. V1 with shared memory reduction is actually slower than V0 — synchronization overhead outweighs the memory benefit.
+V0 Occupancy 96.87%但最慢——一个thread一行串行扫描C=2048个元素，Warp Cycles Per Issued到255.6 cycles，大部分时间等内存。V2用warp reduction（一个warp一行），DRAM到86.57%，比V0快5倍。V1用shared memory规约反而比V0慢——同步开销抵消了内存访问的收益。
 
 ---
 
-## 8. GEMM V1→V4 (Nsight Compute measured)
+## 8. GEMM V1→V4（Nsight Compute实测）
 
-Tested on RTX 5060 Laptop, CUDA 12.x. All sizes measured with Nsight Compute (ncu timing includes profiling overhead, longer than cudaEvent).
+RTX 5060 Laptop，CUDA 12.x。所有size都用Nsight Compute测（ncu计时包含profiling overhead，比cudaEvent长）。
 
 ### 1024³ (Nsight Compute)
 
-| Version | What Changed | Latency | vs V1 | vs cuBLAS FP32 | DRAM % | SM % |
+| Version | 改了什么 | Latency | vs V1 | vs cuBLAS FP32 | DRAM % | SM % |
 | ------ | ------ | ------ | ------- | -------------- | ------------ | ---------- |
-| `v1.cu` | Naive, reads global memory repeatedly | 2.133 ms | 1.00× | 18.5% | 0.90% | 91.82% |
-| `v2.cu` | Shared memory tiling 32×32 | 1.858 ms | 1.15× | 21.2% | 0.89% | 84.50% |
-| `v3.cu` | Register tiling 8×8 | 1.220 ms | 1.75× | 32.3% | 1.73% | 20.23% |
-| `v4_double_buffer.cu` | Double buffering, overlap load and compute | 1.722 ms | 1.24× | 22.9% | 1.22% | 82.31% |
-| cuBLAS FP32 | Official baseline | 0.394 ms | 5.41× | 100% | — | — |
+| `v1.cu` | Naive，反复读global memory | 2.133 ms | 1.00× | 18.5% | 0.90% | 91.82% |
+| `v2.cu` | Shared memory tiling, 32×32 | 1.858 ms | 1.15× | 21.2% | 0.89% | 84.50% |
+| `v3.cu` | Register tiling, 8×8 | 1.220 ms | 1.75× | 32.3% | 1.73% | 20.23% |
+| `v4_double_buffer.cu` | Double buffering，load和compute重叠 | 1.722 ms | 1.24× | 22.9% | 1.22% | 82.31% |
+| cuBLAS FP32 | 官方baseline | 0.394 ms | 5.41× | 100% | — | — |
 
 ### 4096³ (Nsight Compute)
 
@@ -203,44 +203,44 @@ Tested on RTX 5060 Laptop, CUDA 12.x. All sizes measured with Nsight Compute (nc
 | `v4_double_buffer.cu` | 961.8 ms | 1424.8 ms | 30.5% | 81.81 | 12.69 | 0 | 49.67 | 66.66 |
 | cuBLAS FP32 | 293.0 ms | — | 100% | — | — | — | — | — |
 
-### Nsight Systems system-level analysis (v3 @ 4096³)
+### Nsight Systems系统级分析（v3 @ 4096³）
 
-NSYS timeline, not just single kernel:
+NSYS timeline，不是单kernel视角：
 
-| Phase | Latency | % | Notes |
+| Phase | Latency | % | 备注 |
 | ------ | ------ | ---- | ---- |
-| cudaMalloc | 296 ms | 54.3% | 3 allocations, 4096³ matrices total 192 MB |
-| cudaEventSynchronize | 169 ms | 31.0% | Waiting for kernel to finish |
-| cudaMemcpy H2D | 76 ms | 14.0% | A+B total 128 MB from host to device |
-| cudaLaunchKernel | 1.4 ms | 0.3% | Kernel launch overhead is negligible |
-| matmul_v3 (GPU) | 169 ms | 100% GPU | Single kernel instance, no overlap |
+| cudaMalloc | 296 ms | 54.3% | 3次分配4096³矩阵，总共192 MB |
+| cudaEventSynchronize | 169 ms | 31.0% | 等kernel跑完 |
+| cudaMemcpy H2D | 76 ms | 14.0% | A+B总共128 MB从host搬到device |
+| cudaLaunchKernel | 1.4 ms | 0.3% | Kernel launch开销可以忽略 |
+| matmul_v3 (GPU) | 169 ms | 100% GPU | 单个kernel实例，没有overlap |
 
-Observations:
+观察：
 
-1. **Kernel launch overhead is only 0.3%** — not a bottleneck, no need for CUDA Graphs.
-2. **H2D copy and kernel are serialized**, no overlap. Multi-stream could overlap copy and compute in multi-batch scenarios.
-3. **Kernel itself 169 ms** (ncu gives 70 ms because it only measures the kernel, not host overhead; cudaEvent gives 48.7 ms).
+1. **Kernel launch开销只有0.3%**——不是瓶颈，不需要CUDA Graphs。
+2. **H2D copy和kernel是串行的**——没有overlap。多stream可以在多batch场景下overlap copy和compute。
+3. **Kernel本身169 ms**（ncu给70 ms因为它只测kernel不测host overhead；cudaEvent给48.7 ms）。
 
-> cuBLAS FP32 baseline measured with `矩阵乘法/cublas_baseline_fp32.cu`, WARMUP=10, REPS=100, cudaEvent timing.
+> cuBLAS FP32 baseline用`矩阵乘法/cublas_baseline_fp32.cu`测，WARMUP=10, REPS=100，cudaEvent计时。
 
-Interesting observations:
+更多观察：
 
-1. At 1024³, DRAM is under 2% across all versions — three matrices total 12 MB, L2 has 32 MB, everything fits in cache. So V2 shared memory doesn't speed things up much (only 1.15×).
-2. At 4096³, V3's lead widens to 3.81× because register tiling truly reduces global memory access count. V3 SM is only 32.97% (much lower than V2's 81%), but it wins by reducing memory traffic — bottleneck is memory, idle SM is fine.
-3. At 8192³ all versions' L2 Hit drops to 42-50% (V3 had 66.5% at 4096), data no longer fits in cache. V3 still leads at 4.05×, V2/V4 are roughly equal (1.63×). V2 and V4 metrics are nearly identical (SM~81%, DRAM~12.7%, L1=0%, L2~49.7%) — double buffering gives no extra benefit at this size.
-4. V1 L1 Hit reaches 94.98% — naive implementation reads the same rows/columns repeatedly, data stays in L1. But its DRAM is only 8.27%, SM 76.84% — it saturates neither bandwidth nor compute, slow purely due to bad access patterns.
-5. V2/V4 L1 Hit = 0% — after data is moved to shared memory via tiling, L1 no longer caches global memory accesses. This is normal, not a bug.
+1. 1024³时所有版本DRAM都不到2%——三个矩阵总共12 MB，L2有32 MB，全放cache里了。所以V2 shared memory提速不明显（只有1.15×）。
+2. 4096³时V3的领先扩大到3.81×——register tiling真正减少了global memory访问次数。V3 SM只有32.97%（远低于V2的81%）但靠减少内存流量赢了——瓶颈在内存，SM闲着没事。
+3. 8192³时所有版本L2 Hit降到42-50%（V3在4096时还有66.5%）——数据放不进cache了。V3还是领先4.05×，V2/V4差不多（1.63×）。V2和V4指标几乎一样（SM~81%, DRAM~12.7%, L1=0%, L2~49.7%）——这个size下double buffering没额外收益。
+4. V1 L1 Hit到94.98%——naive实现反复读相同的行/列，数据留在L1里。但它DRAM只有8.27%，SM 76.84%——既没榨带宽也没榨算力，慢纯粹是访问模式烂。
+5. V2/V4 L1 Hit = 0%——数据搬到shared memory做tiling后，L1不再cache global memory访问。这是正常的，不是bug。
 
-The optimization path is step-by-step memory reduction: global → shared → register → overlap load and compute.
+优化路径是一步步减内存：global → shared → register → load和compute overlap。
 
-### Why V4 is slower than V3: double buffer regression analysis
+### 为什么V4比V3慢——double buffering回归分析
 
-Intuitively double buffering should be faster than single buffering, but V4 (1.14 TFLOPS) is almost half of V3 (2.0 TFLOPS). NCU comparison shows the root cause isn't double buffering itself — V4's base architecture is weaker.
+直觉上double buffering应该比单buffer快，但V4（1.14 TFLOPS）差不多是V3（2.0 TFLOPS）的一半。NCU对比发现根因不是double buffering本身——V4的基础架构更弱。
 
-| Metric | V3 (register tiling) | V4 (double buffering) |
+| 指标 | V3 (register tiling) | V4 (double buffering) |
 | ------ | ----------------- | ------------- |
 | Tile size | 128×128 | 32×32 |
-| C elements per thread | 8×8 = 64 | 1×1 = 1 |
+| 每thread算C元素 | 8×8 = 64 | 1×1 = 1 |
 | Block threads | 256 | 1024 |
 | Shared memory | 32 KB | 16 KB |
 | SM utilization | 32.97% | **81.57%** |
@@ -249,33 +249,31 @@ Intuitively double buffering should be faster than single buffering, but V4 (1.1
 | L1 Hit | 14.93% | **0%** |
 | L2 Hit | 66.52% | 49.39% |
 
-**Root cause 1: tile is 4× smaller, no register tiling (primary)**
+**根因1：tile小了4倍，没有register tiling（主要原因）**
+V3的128×128 tile每个thread算64个C元素；shared memory block `As[128][8]`被16个行thread复用，`Bs[8][128]`被16个列thread复用。V4的32×32 tile每个thread只算1个C元素；shared memory数据用一次就丢——**零register reuse**。
 
-V3's 128×128 tile has each thread computing 64 C elements; shared memory block `As[128][8]` is reused by 16 row threads, `Bs[8][128]` by 16 column threads. V4's 32×32 tile has each thread computing only 1 C element; shared memory data is used once and discarded — **zero register reuse**.
+注意V4 SM utilization（81.57%）比V3（32.97%）高得多但它更慢——V4的SM在做低效计算（每个FMA贡献1个C），V3的SM activity低但每个FMA贡献64个C。**高SM utilization ≠ 快——看每cycle的有效输出。**
 
-Note V4 SM utilization (81.57%) is much higher than V3 (32.97%), but it's slower — V4's SM is doing inefficient compute (each FMA contributes 1 C), V3's SM has lower activity but each FMA contributes 64 C. **High SM utilization ≠ fast — measure effective output per cycle.**
-
-**Root cause 2: V4's double buffering is "fake double buffering"**
+**根因2：V4的double buffering是「伪double buffering」**
 
 ```cpp
-As[read][...] = A[...];           // load next tile
-for (k) sum += As[comp][...];     // compute current tile
-__syncthreads();                   // wait for all threads
+As[read][...] = A[...];           // load下一tile
+for (k) sum += As[comp][...];     // 算当前tile
+__syncthreads();                   // 等所有thread
 ```
 
-Load and compute are **serial within the same warp** — all 32 threads either load or compute, never both simultaneously. `__syncthreads()` stalls the whole block, zero overlap. Real double buffering needs `cp.async` hardware async copy to let load and compute units truly run in parallel. V4's hand-written double buffering just doubles shared memory usage without hiding latency.
+Load和compute在**同一个warp内是串行的**——32个thread要么load要么compute，永远不会同时做。`__syncthreads()`把整个block卡住，零overlap。真正的double buffering需要`cp.async`硬件异步copy让load和compute单元真的并行。V4手写的double buffering只是多占了shared memory，没hide latency。
 
-**Root cause 3: L1 Hit = 0%**
+**根因3：L1 Hit = 0%**
+V4的小32×32 tile导致数据load完立刻从L1被evict；V3的128×128 tile有14.93% L1 hit rate。
 
-V4's small 32×32 tile means data is evicted from L1 immediately after loading; V3's 128×128 tile has 14.93% L1 hit rate.
-
-**Conclusion**: V4 is slow not because of double buffering, but because V4 uses 32×32 small tiles + no register tiling + fake double buffering. The correct evolution path is V3 (128×128 register tiling) → add `cp.async` double buffering, not hand-written double buffering on V2 (32×32).
+**结论**：V4慢不是因为double buffering，而是因为V4用了32×32小tile + 没有register tiling + 伪double buffering。正确的进化路径是V3（128×128 register tiling）→ 加`cp.async` double buffering，不是在V2（32×32）上写手搓double buffering。
 
 ---
 
 ## 9. Tensor Core GEMM (WMMA)
 
-Tested on RTX 5060 Laptop, CUDA 12.x, FP32 accumulation. REPS=100 averaged; CPU validation skipped above 4096³ (too slow).
+RTX 5060 Laptop，CUDA 12.x，FP32累加。REPS=100取平均；4096³以上跳过CPU验证（太慢）。
 
 ### 4096³
 
@@ -299,17 +297,19 @@ Tested on RTX 5060 Laptop, CUDA 12.x, FP32 accumulation. REPS=100 averaged; CPU 
 | k5 | 56073.47 us | 19.6 | 57.7% |
 | cuBLAS | 32346.58 us | 34.0 | 100.0% |
 
-cuBLAS drops from 34.6 to 34.0 TFLOPS between 4096→8192 — barely any drop, meaning cuBLAS hasn't hit bandwidth wall yet at 8192. Hand-written k5 drops from 21.5 to 19.6 (~9%), showing hand-written access patterns are worse than cuBLAS and get dragged down more at large sizes.
+cuBLAS在4096→8192之间只从34.6降到34.0 TFLOPS——几乎没降，说明cuBLAS在8192还没撞带宽墙。手写k5从21.5降到19.6（约9%），说明手写的访问模式不如cuBLAS，大size时被拖得更多。
+
+---
 
 ## 10. Fundamentals
 
-Early indexing, memory access, memory hierarchy small examples. Formal Reduce / SoftMax / RMSNorm / GEMM / WMMA above take precedence.
+早期的索引、内存访问、内存层级的小例子。上面正规的Reduce / SoftMax / RMSNorm / GEMM / WMMA优先看。
 
-| File | Description |
+| 文件 | 说明 |
 | --- | --- |
-| `fundamentals/2D/2Dgrid+2DBlock.cu` | 2D grid for grayscale |
-| `fundamentals/3D/3Dgrid+3DBlock.cu` | `blockIdx.z` as batch |
+| `fundamentals/2D/2Dgrid+2DBlock.cu` | 2D grid，灰度图 |
+| `fundamentals/3D/3Dgrid+3DBlock.cu` | `blockIdx.z`当batch |
 | `fundamentals/Constant Memory/Constant_memory.cu` | `__constant__` |
-| `fundamentals/Shared Memory/` | bank conflict, padding, shared memory reversal |
-| `fundamentals/Texture Memory/Texture_Memory.cu` | `__ldg` / `__restrict__` read-only cache |
+| `fundamentals/Shared Memory/` | bank conflict、padding、shared memory反转 |
+| `fundamentals/Texture Memory/Texture_Memory.cu` | `__ldg` / `__restrict__` 只读cache |
 | `fundamentals/matmul_tiled/matmul_tiled.cu` | `TILE=16` tiled matmul |
