@@ -8,24 +8,24 @@
 
 # CUDA Kernel Implementations
 
-Handwritten CUDA kernels from scratch on a single RTX 5060 Laptop — from vector add all the way up to Tensor Core WMMA. Every kernel has a V0→final evolution chain with Nsight Compute profiling pinning down the hardware bottleneck at each step.
+单卡RTX 5060 Laptop上手写CUDA kernel——从vector add一路到Tensor Core WMMA。每个kernel都有V0→final迭代链，用Nsight Compute在每一步定位硬件瓶颈。
 
-**Reduce V0→V7 is the blueprint for everything else** — the partial+reduce pattern here is what I reused for FlashAttention backward, and the "block count too low → smem overhead hurts" rule from Reduce V5 guided FP8 PagedAttention scale granularity:
+**Reduce V0→V7 是所有后续项目的方法论蓝图**——这里练出来的partial+reduce模式直接复用到FlashAttention backward，Reduce V5踩过的「block太少→smem overhead反而拖慢」这条rule指导了FP8 PagedAttention的scale粒度选择：
 
-| Version | Symptom | NCU root cause | Fix |
-| ------- | ------- | -------------- | --- |
-| V0 | Dead slow | Serial reduction, 0 SM occupancy | Switch to warp-parallel |
-| V1 | Still slow | Non-coalesced reads | Fix read ordering |
-| V3 | Bank conflict | smem stride → 4 threads hit same bank | Add padding |
-| V5 | BW% stuck at 15% | smem atomic_add 4-way bank conflict | Two-phase reduction |
-| V6 | BW% → 85% | Eliminated atomic contention + register partials | Each warp writes partial to separate bank, then cross-warp reduce |
-| V7 | Fake double buffering | Rotating two buffers but wrong prefetch timing — actually slower | Fixed prefetch cadence |
+| Version | 症状 | NCU定位的根因 | 解法 |
+| ------- | ---- | ------------- | ---- |
+| V0 | 死慢 | 串行规约，0 SM occupancy | 改warp-parallel |
+| V1 | 还是慢 | non-coalesced reads | 调整读顺序 |
+| V3 | bank conflict | smem stride导致4个thread撞同一个bank | 加padding |
+| V5 | BW%卡在15% | smem atomic_add 4-way bank conflict | 改两阶段规约 |
+| V6 | BW%→85% | 消除atomic竞争 + register存partial | 每个warp把partial写到不同bank，再跨warp规约 |
+| V7 | 伪double buffering | 两个buffer轮着用但prefetch时机错了，反而更慢 | 修正prefetch cadence |
 
-Other pitfalls:
+其他坑：
 
-- Register spill to local memory doubles latency (`Register/register_spill.cu`)
-- Fake cp.async double buffering — looks like rotation but prefetch was off, slower than single buffer (`GEMM/gemm_double_buffer.cu`)
-- WMMA fragment layout mismatch — K/N stride reversed from what docs suggested, took a day to debug
+- register spill到local memory直接让latency翻倍（`Register/register_spill.cu`）
+- 伪cp.async double buffering——看起来轮了两个buffer但prefetch时机不对，反而比单buffer慢（`GEMM/gemm_double_buffer.cu`）
+- WMMA fragment布局和文档写的不一样——K/N stride搞反了，编译过了但结果是错的，花了一天才debug出来
 
 ## 1. Vector Add, Grid Stride
 
