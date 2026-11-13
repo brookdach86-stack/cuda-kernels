@@ -1,3 +1,6 @@
+// @Author: Wain (brookdach86-stack@users.noreply.github.com)
+// @GitHub: https://github.com/brookdach86-stack
+// @Note: 本代码为原创，转载请注明来源。基于学习路径迭代：CSAPP Lab → CUDA Kernel → Triton → LLM Inference
 /*
 1.主机准备 cudaMalloc分配全局内存
 2.协作加载 threadIdx.x -> 共享内存tile

@@ -1,3 +1,6 @@
+// @Author: Wain (brookdach86-stack@users.noreply.github.com)
+// @GitHub: https://github.com/brookdach86-stack
+// @Note: 本代码为原创，转载请注明来源。基于学习路径迭代：CSAPP Lab → CUDA Kernel → Triton → LLM Inference
 // ==================== 4.2 冲突版（原代码） ====================
 __global__ void maxConflictKernel(float* d_out, const float* d_in) {
     __shared__ float tile[8192]; // 原本的共享内存

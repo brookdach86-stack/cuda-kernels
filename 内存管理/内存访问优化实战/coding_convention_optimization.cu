@@ -1,3 +1,6 @@
+// @Author: Wain (brookdach86-stack@users.noreply.github.com)
+// @GitHub: https://github.com/brookdach86-stack
+// @Note: 本代码为原创，转载请注明来源。基于学习路径迭代：CSAPP Lab → CUDA Kernel → Triton → LLM Inference
 /*
 归约（Reduction）内核：用于对数组求和
 核心思想：使用共享内存逐步"折叠"数据，将多个元素归约为一个结果

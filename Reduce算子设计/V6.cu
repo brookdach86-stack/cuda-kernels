@@ -1,3 +1,6 @@
+// @Author: Wain (brookdach86-stack@users.noreply.github.com)
+// @GitHub: https://github.com/brookdach86-stack
+// @Note: 本代码为原创，转载请注明来源。基于学习路径迭代：CSAPP Lab → CUDA Kernel → Triton → LLM Inference
 /*
 核心改动：两步归约，彻底消除 atomicAdd 竞争。
 V5：很多 block 抢一个桶；V6：每个 block 发一个桶，最后再汇总。

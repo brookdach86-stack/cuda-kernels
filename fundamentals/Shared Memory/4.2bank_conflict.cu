@@ -1,3 +1,6 @@
+// @Author: Wain (brookdach86-stack@users.noreply.github.com)
+// @GitHub: https://github.com/brookdach86-stack
+// @Note: 本代码为原创，转载请注明来源。基于学习路径迭代：CSAPP Lab → CUDA Kernel → Triton → LLM Inference
 /*
 1. 物理分块:把256个元素的tile数组切分成32个交错的Bank
 2. 制造两路冲突:把核函数的读取步长改为2,线程0和线程16挤在同一个Bank0窗口,造成2-way冲突,

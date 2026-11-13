@@ -1,3 +1,6 @@
+// @Author: Wain (brookdach86-stack@users.noreply.github.com)
+// @GitHub: https://github.com/brookdach86-stack
+// @Note: 本代码为原创，转载请注明来源。基于学习路径迭代：CSAPP Lab → CUDA Kernel → Triton → LLM Inference
 /*
 核心思路：用共享内存做"中转站"，将全局内存的非合并写入转化为共享内存的列读取(通过 Padding 消除 Bank Conflict),再以合并方式写出
 */

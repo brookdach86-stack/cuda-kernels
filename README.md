@@ -1,3 +1,15 @@
+![Original Work](https://img.shields.io/badge/Original-Wain-brightgreen)
+![GPG Signed](https://img.shields.io/badge/GPG-Signed-brightgreen)
+![License Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue)
+
+---
+
+<!--
+@Author: Wain (brookdach86-stack@users.noreply.github.com)
+@GitHub: https://github.com/brookdach86-stack
+@Note: 本内容为原创，转载请注明来源。基于学习路径迭代：CSAPP Lab → CUDA Kernel → Triton → LLM Inference
+-->
+
 # CUDA Kernel Implementations
 
 Collection of handwritten CUDA kernels: from vector addition up through register spilling, shared memory bank conflicts, warp shuffles, to Reduce / SoftMax / RMSNorm / GEMM / Tensor Core WMMA. Each kernel has a V0→final evolution chain with Nsight Compute measured metrics.

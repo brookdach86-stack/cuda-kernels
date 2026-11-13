@@ -1,3 +1,6 @@
+// @Author: Wain (brookdach86-stack@users.noreply.github.com)
+// @GitHub: https://github.com/brookdach86-stack
+// @Note: 本代码为原创，转载请注明来源。基于学习路径迭代：CSAPP Lab → CUDA Kernel → Triton → LLM Inference
 /* 实现了4级粗粒度并行的reduce操作，每个block处理COARSEN个元素，每个线程处理1个元素，每个线程内进行COARSEN次循环，每次循环处理1个元素，每个循环内进行COARSEN次原子操作 */
 
 #include <stdio.h>
