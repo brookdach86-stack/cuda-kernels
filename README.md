@@ -227,7 +227,7 @@ NSYS timeline，不是单kernel视角：
 
 1. 1024³时所有版本DRAM都不到2%——三个矩阵总共12 MB，L2有32 MB，全放cache里了。所以V2 shared memory提速不明显（只有1.15×）。
 2. 4096³时V3的领先扩大到3.81×——register tiling真正减少了global memory访问次数。V3 SM只有32.97%（远低于V2的81%）但靠减少内存流量赢了——瓶颈在内存，SM闲着没事。
-3. 8192³时所有版本L2 Hit降到42-50%（V3在4096时还有66.5%）——数据放不进cache了。V3还是领先4.05×，V2/V4差不多（1.63×）。V2和V4指标几乎一样（SM~81%, DRAM~12.7%, L1=0%, L2~49.7%）——这个size下double buffering没额外收益。
+3. 8192³时所有版本L2 Hit降到42-50%（V3在4096时还有66.5%）——数据放不进cache了。V3还是领先4.05×，V2/V4差不多（1.63×）。V2和V4指标几乎一样（SM～81%, DRAM～12.7%, L1=0%, L2～49.7%）——这个size下double buffering没额外收益。
 4. V1 L1 Hit到94.98%——naive实现反复读相同的行/列，数据留在L1里。但它DRAM只有8.27%，SM 76.84%——既没榨带宽也没榨算力，慢纯粹是访问模式烂。
 5. V2/V4 L1 Hit = 0%——数据搬到shared memory做tiling后，L1不再cache global memory访问。这是正常的，不是bug。
 
