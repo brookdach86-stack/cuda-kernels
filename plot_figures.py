@@ -125,9 +125,9 @@ plt.close(fig)
 # ---------------------------------------------------------------
 # 图 0：架构图
 # ---------------------------------------------------------------
-fig, ax = plt.subplots(figsize=(11, 4.8))
+fig, ax = plt.subplots(figsize=(11, 5.2))
 ax.set_xlim(0, 11)
-ax.set_ylim(0, 4.8)
+ax.set_ylim(0, 5.2)
 ax.axis("off")
 
 
@@ -166,9 +166,9 @@ box(6.95, 0.55, 1.7, 0.85, "WMMA Tensor Core\n\nk1->k5\n57.8% cuBLAS @8192", "#F
 arrow(9.0, 2.4, 9.45, 2.4)
 box(9.45, 1.75, 1.1, 1.3, "Nsight\nCompute\n\nbottleneck\nper step", "#EDE7F6", "#5E35B1", fs=8.5)
 
-ax.text(5.5, 4.72, "CUDA Kernel Implementations", ha="center", va="center",
+ax.text(5.5, 4.98, "CUDA Kernel Implementations", ha="center", va="center",
         fontsize=15, fontweight="bold", color="#263238")
-ax.text(5.5, 4.42, "from vector add to Tensor Core WMMA, all on a single RTX 5060 Laptop",
+ax.text(5.5, 4.66, "from vector add to Tensor Core WMMA, all on a single RTX 5060 Laptop",
         ha="center", va="center", fontsize=9, color="#546E7A", style="italic")
 
 fig.tight_layout()
