@@ -8,7 +8,7 @@
 
 # CUDA Kernel Implementations
 
-![architecture](figures/fig0_architecture.png)
+![architecture](https://ghfast.top/https://raw.githubusercontent.com/brookdach86-stack/cuda-kernels/main/figures/fig0_architecture.png)
 
 单卡RTX 5060 Laptop上手写CUDA kernel——从vector add一路到Tensor Core WMMA。每个kernel都有V0→final迭代链，用Nsight Compute在每一步定位硬件瓶颈。
 
@@ -87,7 +87,7 @@ Warp是CUDA最小执行单位——32个thread锁在一起。Shuffle在register�
 
 ## 5. Reduce V0→V7
 
-![reduce](figures/fig1_reduce_evolution.png)
+![reduce](https://ghfast.top/https://raw.githubusercontent.com/brookdach86-stack/cuda-kernels/main/figures/fig1_reduce_evolution.png)
 
 | Version | 改了什么 | Latency (N=16M) | 备注 |
 | ------ | --------- | ------ | ---- |
@@ -125,7 +125,7 @@ RTX 5060 Laptop上测，N = 1<<24 = 16M，cudaEvent计时 + Nsight Compute profi
 
 ## 6. SoftMax
 
-![softmax](figures/fig2_softmax.png)
+![softmax](https://ghfast.top/https://raw.githubusercontent.com/brookdach86-stack/cuda-kernels/main/figures/fig2_softmax.png)
 
 | Version | 改了什么 | Latency (N=8192, C=4096) |
 | ------ | --------- | ------ |
@@ -177,7 +177,7 @@ V0 Occupancy 96.87%但最慢——一个thread一行串行扫描C=2048个元素�
 
 ## 8. GEMM V1→V4（Nsight Compute实测）
 
-![gemm](figures/fig3_gemm.png)
+![gemm](https://ghfast.top/https://raw.githubusercontent.com/brookdach86-stack/cuda-kernels/main/figures/fig3_gemm.png)
 
 RTX 5060 Laptop，CUDA 12.x。所有size都用Nsight Compute测（ncu计时包含profiling overhead，比cudaEvent长）。
 
